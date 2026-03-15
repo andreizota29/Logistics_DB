@@ -1,0 +1,16 @@
+-- TABLES SPACE creation
+-- Disk 1: Reference Data (Static names)
+CREATE TABLESPACE LOG_REF_TS 
+DATAFILE '/ora/disk1/log_ref01.dbf' SIZE 500M 
+EXTENT MANAGEMENT LOCAL UNIFORM SIZE 128K;
+
+-- Disk 2: Transactional Data - 100M+ rows
+CREATE TABLESPACE LOG_DATA_TS 
+DATAFILE '/ora/disk2/log_data01.dbf' SIZE 20G 
+AUTOEXTEND ON NEXT 1G 
+EXTENT MANAGEMENT LOCAL UNIFORM SIZE 1M;
+
+-- Disk 3: Index Segments for search optimization
+CREATE TABLESPACE LOG_IDX_TS 
+DATAFILE '/ora/disk3/log_idx01.dbf' SIZE 10G 
+EXTENT MANAGEMENT LOCAL UNIFORM SIZE 256K;

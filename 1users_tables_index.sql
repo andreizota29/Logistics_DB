@@ -54,9 +54,19 @@ CREATE TABLE System_Audit (
 ) TABLESPACE LOG_DATA_TS PCTFREE 0;
 
 -- index segment placed on Disk 3 to separate I/O
+-- idx_track_id
 CREATE UNIQUE INDEX LOG_ARCHITECT.idx_track_id ON LOG_ARCHITECT.Shipment_Tracking (track_id) 
 NOLOGGING 
 PARALLEL 2 
 TABLESPACE LOG_IDX_TS;
 
+-- invisible index
+CREATE INDEX LOG_ARCHITECT.idx_cust_status 
+ON LOG_ARCHITECT.Shipments (cust_id, status) 
+INVISIBLE 
+TABLESPACE LOG_IDX_TS;
 
+-- function based index (for low selectivity)
+CREATE INDEX LOG_ARCHITECT.idx_func_time 
+ON LOG_ARCHITECT.Shipment_Tracking (TRUNC(loc_timestamp)) 
+TABLESPACE LOG_IDX_TS;

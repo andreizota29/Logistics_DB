@@ -1,0 +1,51 @@
+CREATE ROLE LOG_DISPATCHER_ROLE;
+CREATE ROLE LOG_ANALYST_ROLE;
+
+GRANT SELECT, INSERT, UPDATE ON LOG_ARCHITECT.Shipments TO LOG_DISPATCHER_ROLE;
+GRANT SELECT, INSERT ON LOG_ARCHITECT.Shipment_Tracking TO LOG_DISPATCHER_ROLE;
+GRANT SELECT ON LOG_ARCHITECT.Customers TO LOG_DISPATCHER_ROLE;
+
+GRANT SELECT ON LOG_ARCHITECT.Shipments TO LOG_ANALYST_ROLE;
+GRANT SELECT ON LOG_ARCHITECT.Shipment_Tracking TO LOG_ANALYST_ROLE;
+GRANT SELECT ON LOG_ARCHITECT.MV_Shipment_Summary TO LOG_ANALYST_ROLE;
+
+CREATE USER dispatcher_ion IDENTIFIED BY "ion123";
+CREATE USER analyst_maria IDENTIFIED BY "maria123";
+
+GRANT LOG_DISPATCHER_ROLE TO dispatcher_ion;
+GRANT LOG_ANALYST_ROLE TO analyst_maria;
+
+GRANT CREATE SESSION TO dispatcher_ion;
+GRANT CREATE SESSION TO analyst_maria;
+
+-- test 1
+INSERT INTO LOG_ARCHITECT.Shipments (ship_id, cust_id, status) 
+VALUES ((SELECT MAX(ship_id) + 1 FROM LOG_ARCHITECT.Shipments), 1, 'In Transit');
+COMMIT;
+
+SELECT * FROM LOG_ARCHITECT.System_Audit;
+
+
+test 2
+CREATE AUDIT POLICY audit_shipments_policy
+ACTIONS UPDATE ON LOG_ARCHITECT.Shipments;
+
+AUDIT POLICY audit_shipments_policy BY dispatcher_ion;
+
+CONNECT dispatcher_ion/ion123;
+
+UPDATE LOG_ARCHITECT.Shipments 
+SET status = 'Delivered' 
+WHERE ship_id = (SELECT MAX(ship_id) FROM LOG_ARCHITECT.Shipments);
+COMMIT;
+
+-- as sysdba
+SET LINESIZE 200;
+COLUMN dbusername FORMAT A15;
+COLUMN action_name FORMAT A15;
+COLUMN object_name FORMAT A20;
+
+SELECT dbusername, action_name, object_name, event_timestamp 
+FROM unified_audit_trail 
+WHERE dbusername = 'DISPATCHER_ION'
+ORDER BY event_timestamp DESC;

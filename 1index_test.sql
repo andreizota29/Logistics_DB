@@ -1,5 +1,3 @@
---stress test
-
 
 --no index
 SELECT /*+ FULL(st) */ count(*) 

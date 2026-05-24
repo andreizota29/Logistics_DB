@@ -2,7 +2,7 @@ SET LINESIZE 200;
 SET PAGESIZE 50;
 
 
--- idx_track_id TEST
+-- idx_track_id (good selectivity)
 -- ignore index
 SET TIMING ON
 SELECT /*+ FULL(st) GATHER_PLAN_STATISTICS */ * FROM LOG_ARCHITECT.Shipment_Tracking st 
@@ -14,7 +14,7 @@ WHERE track_id = 50000000;
 SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY_CURSOR(FORMAT=>'ALLSTATS LAST'));
 
 
--- idx_cust_status
+-- idx_cust_status (joins)
 -- ignore index
 ALTER INDEX LOG_ARCHITECT.idx_cust_status INVISIBLE;
 SET TIMING ON
@@ -31,7 +31,7 @@ JOIN LOG_ARCHITECT.Shipments s ON c.id = s.cust_id
 WHERE s.cust_id = 1 AND s.status = 'In Transit';
 SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY_CURSOR(FORMAT=>'ALLSTATS LAST'));
 
--- idx_func_time
+-- idx_func_time (weak selectivity)
 -- ignore index
 SELECT /*+ NO_INDEX(st idx_func_time) GATHER_PLAN_STATISTICS */ COUNT(*) 
 FROM LOG_ARCHITECT.Shipment_Tracking st 

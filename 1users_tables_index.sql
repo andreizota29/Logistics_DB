@@ -19,6 +19,10 @@ ALTER USER LOG_ARCHITECT QUOTA UNLIMITED ON USERS;
 -- Connect as the new user
 CONNECT LOG_ARCHITECT/architect;
 
+SELECT owner, table_name 
+FROM dba_tables 
+ORDER BY owner, table_name;
+
 -- reference tables on '/ora/disk1/log_ref01.dbf' LOG_REF_TS
 CREATE TABLE Countries (id NUMBER PRIMARY KEY, name VARCHAR2(50)) TABLESPACE LOG_REF_TS;
 CREATE TABLE Cities (id NUMBER PRIMARY KEY, name VARCHAR2(50), country_id NUMBER) TABLESPACE LOG_REF_TS;

@@ -20,7 +20,8 @@ ALTER USER LOG_ARCHITECT QUOTA UNLIMITED ON USERS;
 CONNECT LOG_ARCHITECT/architect;
 
 SELECT owner, table_name 
-FROM dba_tables 
+FROM dba_tables
+    where owner  = 'LOG_ARCHITECT'
 ORDER BY owner, table_name;
 
 -- reference tables on '/ora/disk1/log_ref01.dbf' LOG_REF_TS

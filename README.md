@@ -1,7 +1,7 @@
 ## 1. Physical Architecture (Storage Layer)
 
 To optimize I/O performance and prevent hardware bottlenecks, the database is distributed across three distinct physical disks. 
-This separation ensures that "Heavy Writes"  do not interfere with "Heavy Reads" (Indexes).
+This separation ensures that "Heavy Writes" do not interfere with "Heavy Reads" (Indexes).
 
 | Tablespace | Physical Path | Allocation | Purpose |
 | --- | --- | --- | --- |
@@ -15,6 +15,7 @@ We implemented specific block-level tuning to manage how data is physically pack
 
 * **`PCTFREE 20` (Table `SHIPMENTS`):** Reserved 20% of each block for future status updates (e.g., "In Transit" to "Delivered") to prevent Row Chaining.
 * **`PCTFREE 0` (Table `SYSTEM_AUDIT`):** Maximized density for read-only logs that are never updated, saving significant disk space.
+* **`UNIFORM SIZE 1M` / `128K`:** Configured 1MB extents for Big Data (`LOG_DATA_TS`) to reduce metadata overhead, and 128KB for operational tables to prevent fragmentation.
 
 ## 2. Logical Schema Design
 
@@ -34,7 +35,7 @@ To meet the assessment requirements for "complex segments beyond simple tables,"
 Unlike standard views, these are physical segments stored on **Disk 1** to provide instant reporting.
 
 1. **`MV_SHIPMENT_SUMMARY`**: Provides pre-calculated event counts per shipment.
-2. **`MV_ROMANIA_SHIPMENTS`**: A geographic subset of data filtered for Romanian coordinates ($43^{\circ}–49^{\circ} N, 20^{\circ}–30^{\circ} E$).
+2. **`MV_ROMANIA_SHIPMENTS`**: A geographic subset of data filtered for Romanian coordinates (43°–49° N, 20°–30° E).
 * *Constraint:* Limited to 50,000 rows to ensure fit within the 500MB `LOG_REF_TS` allocation.
 
 ### B. Logical Views (Virtual Tier)
@@ -45,15 +46,23 @@ Unlike standard views, these are physical segments stored on **Disk 1** to provi
 ### C. Advanced Indexing
 
 * **`idx_track_id`**: A Unique Index pinned to **Disk 3**. Created using `NOLOGGING` and `PARALLEL 2` to accelerate the initial build on the 100M-row dataset.
+* **`idx_func_time`**: A Functional Index deployed to optimize queries containing data/time transformations in the `WHERE` clause.
+* **`idx_cust`**: A Relational B-Tree Index applied on the `cust_id` foreign key to accelerate table joins between the Operational and Reference tiers.
 
-## 4. Automation & Maintenance
+## 4. Security & Disaster Recovery
+
+* **Role-Based Access Control (RBAC):** `LOG_DISPATCHER_ROLE` granted `INSERT`/`UPDATE` on operational tables but actively denied `SELECT` on `System_Audit` (`ORA-00942`).
+* **Unified Auditing (`audit_shipments_policy`):** Monitors all `UPDATE` statements on the `Shipments` table to prevent status fraud.
+* **Disaster Recovery (RTO 2h / RPO 15m):** Achieved using Data Pump (`expdp`/`impdp`) for logical backups, and automated RMAN scripts in `ARCHIVELOG` mode for continuous redo log archiving.
+
+## 5. Automation & Maintenance
 
 * **Sequence (`track_id_seq`)**: Automates ID generation starting at 100M to prevent collisions with legacy data.
 * **Trigger (`TRG_AUDIT_TRACKING`)**: An event-driven component that automatically populates the `System_Audit` table whenever new tracking data is ingested.
+* **Cron Automation:** A Linux `crontab` job (`*/15 * * * *`) that triggers the 15-minute RMAN backup script at the OS level.
 * **Statistics**: Schema-wide statistics were gathered using `DBMS_STATS.GATHER_SCHEMA_STATS` to ensure the Oracle Optimizer makes the fastest execution choices.
 
-
-## 5. Benchmarking & Stress Test Results
+## 6. Benchmarking & Stress Test Results
 
 The architecture was validated through "Stress Tests" comparing the Base Table (Disk 2) against the Summary Tier (Disk 1).
 

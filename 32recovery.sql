@@ -59,7 +59,7 @@ EOF
 
 echo "*/15 * * * * /home/oracle/backup_15min.sh" | crontab -
 
-chmod +x /home/oracle/backup_15min.sh
+chmod +x /home/oracle/backup_15min.sh --grant execute
 
 crontab -l
 cat /tmp/oracle_backup/rman_cron.log
@@ -67,6 +67,14 @@ cat /tmp/oracle_backup/rman_cron.log
 
 ls -lh /tmp/oracle_backup/
 
+  -- recovery
+  rman target /
+RUN {
 
+  SET UNTIL TIME "TO_DATE('2026-05-25 07:19:31', 'YYYY-MM-DD HH24:MI:SS')";
+  RESTORE DATABASE;
+  RECOVER DATABASE;
+}
+ALTER DATABASE OPEN RESETLOGS;
 
 
